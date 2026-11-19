@@ -124,6 +124,17 @@ input,select,textarea{font-size:17px;padding:10px}
 .legend{display:flex;gap:14px;align-items:center;font-size:15px;color:#555;margin:4px 2px 10px;flex-wrap:wrap}
 .legend i{display:inline-block;width:14px;height:14px;border-radius:4px;margin-right:5px;vertical-align:-2px}
 @media print{.t tbody tr:nth-child(even) td{background:#fff}}
+/* 학급 현황: 학급 + 생활협약 */
+.ctbl td.cp{white-space:normal;min-width:260px;max-width:440px}
+.ctbl td.cp .gb{min-width:0;margin-right:10px;font-variant-numeric:tabular-nums}
+.ctbl td.cp .pl{color:#333;font-weight:500}
+/* 수업 현황 교사별: 칸을 좁고 낮게, 담당 학급만 넓게 */
+.t.tight th,.t.tight td{padding:7px 10px}
+.t.tight td:not(.wrap),.t.tight th:not(:nth-child(3)){width:1%;white-space:nowrap}
+.t.tight td.nar{white-space:normal;word-break:keep-all;min-width:120px;max-width:150px;font-size:14px;color:#555;line-height:1.35}
+.t.tight td.wrap,.t.tight th:nth-child(3){width:100%;max-width:none;min-width:0}
+.t.tight td.wrap{line-height:1.4;padding:6px 8px}
+.t.tight .tag{font-size:14px;padding:2px 8px;margin:2px}
 /* 파일 자료 */
 .upl{background:var(--c2);color:var(--c);font-weight:700;border-radius:10px;padding:12px 14px;margin:8px 0}
 .fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:8px 0 12px}
@@ -233,7 +244,7 @@ const tlist = arr => arr.length ? `<ul class="tlist">${arr.map(t=>`<li>${esc(t)}
 const byClass = (a,b) => num(a.grade)-num(b.grade) || num(a.cls)-num(b.cls);
 function toast(m){ const t=$('#toast'); t.textContent=m; t.style.display='block'; clearTimeout(toast.t); toast.t=setTimeout(()=>t.style.display='none',2300); }
 function tbl(heads, rows, opts={}){
-  return `<div class="tw"><table class="t"><thead><tr>${heads.map((h,i)=>`<th class="${(opts.left||[]).includes(i)?'l':''}">${h}</th>`).join('')}</tr></thead><tbody>${
+  return `<div class="tw"><table class="t ${opts.cls||''}"><thead><tr>${heads.map((h,i)=>`<th class="${(opts.left||[]).includes(i)?'l':''}">${h}</th>`).join('')}</tr></thead><tbody>${
     rows.length ? rows.join('') : `<tr><td colspan="${heads.length}" style="color:#999;padding:20px">자료가 없습니다. [자료 넣기] 탭에서 올려 주세요.</td></tr>`}</tbody></table></div>`;
 }
 // 시트에 직접 추가한 칸(앱이 모르는 칸)도 그대로 보관하고 보여 줍니다
@@ -368,13 +379,13 @@ const VIEWS = {
     const B = L.reduce((s,r)=>s+num(r.boys),0), G = L.reduce((s,r)=>s+num(r.girls),0);
     const rows = []; let g = null, gb = 0, gg = 0, gn = 0;
     const pad = xh('classes').map(()=>'<td></td>').join('');
-    const subtotal = () => rows.push(`<tr class="sub r${gN(g)}"><td>${g}학년 계</td><td>${gn}학급</td><td></td><td></td><td></td><td></td><td>${gb}</td><td>${gg}</td><td>${gb+gg}</td>${pad}</tr>`);
+    const subtotal = () => rows.push(`<tr class="sub r${gN(g)}"><td class="l">${g}학년 계 · ${gn}학급</td><td></td><td></td><td></td><td></td><td>${gb}</td><td>${gg}</td><td>${gb+gg}</td>${pad}</tr>`);
     for (const r of L){
       if (g!==null && r.grade!==g){ subtotal(); gb=gg=gn=0; }
       g = r.grade; gn++; gb += num(r.boys); gg += num(r.girls);
-      rows.push(`<tr class="click r${gN(r.grade)}" onclick="App.edit('classes','${r.id}')"><td>${gBadge(r)}</td><td>${esc(r.cls)}반</td><td>${esc(r.homeroom)}</td><td>${esc(r.subhome)}</td><td>${esc(r.sem1)}</td><td>${esc(r.sem2)}</td><td>${num(r.boys)}</td><td>${num(r.girls)}</td><td><b>${num(r.boys)+num(r.girls)}</b></td>${xtd('classes',r)}</tr>`);
+      rows.push(`<tr class="click r${gN(r.grade)}" onclick="App.edit('classes','${r.id}')"><td class="l cp"><span class="gb g${gN(r.grade)}">${clsName(r)}</span><span class="pl">${esc(r.pledge)}</span></td><td>${esc(r.homeroom)}</td><td>${esc(r.subhome)}</td><td>${esc(r.sem1)}</td><td>${esc(r.sem2)}</td><td>${num(r.boys)}</td><td>${num(r.girls)}</td><td><b>${num(r.boys)+num(r.girls)}</b></td>${xtd('classes',r)}</tr>`);
     }
-    if (L.length){ subtotal(); rows.push(`<tr class="tot"><td>합계</td><td>${L.length}학급</td><td></td><td></td><td></td><td></td><td>${B}</td><td>${G}</td><td>${B+G}</td>${pad}</tr>`); }
+    if (L.length){ subtotal(); rows.push(`<tr class="tot"><td class="l">합계 · ${L.length}학급</td><td></td><td></td><td></td><td></td><td>${B}</td><td>${G}</td><td>${B+G}</td>${pad}</tr>`); }
     return `<div class="stats">${stat('학급 수',L.length)}${stat('남학생',B)}${stat('여학생',G)}${stat('전체 학생',B+G)}${stat('학급당 평균',L.length?(Math.round((B+G)/L.length*10)/10):0)}</div>
     <div class="row between"><div class="chips noprint">${chip('표로 보기',S.cv==='table',"App.set('cv','table')")}${chip('학급 카드 (생활협약)',S.cv==='card',"App.set('cv','card')")}</div><span>${printBtn} <button class="btn noprint" onclick="App.add('classes')">+ 학급 추가</button></span></div>
     ${legend}
@@ -386,7 +397,7 @@ const VIEWS = {
           ${r.pledge?`<div style="background:var(--c2);border-radius:8px;padding:8px;margin-top:6px;white-space:pre-line">🤝 ${esc(r.pledge)}</div>`:''}
           ${r.note?`<div class="hint" style="margin-top:6px">📌 ${esc(r.note)}</div>`:''}
           ${xh('classes').filter(h=>(r.x||{})[h]).map(h=>`<div class="hint">${esc(h)}: ${esc(r.x[h])}</div>`).join('')}</div>`).join('')}</div>`
-      : tbl(['학년','반','담임교사','부담임교사','1학기 반장','2학기 반장','남','여','계',...xth('classes')], rows)}
+      : tbl(['학급 · 생활협약','담임교사','부담임교사','1학기 반장','2학기 반장','남','여','계',...xth('classes')], rows, {left:[0], cls:'ctbl'})}
     <p class="hint noprint">줄을 누르면 고치거나 지울 수 있습니다.</p>`;
   },
 
@@ -403,9 +414,9 @@ const VIEWS = {
       const keys = Object.keys(m).sort((a,b)=> (order.indexOf(a)<0?999:order.indexOf(a)) - (order.indexOf(b)<0?999:order.indexOf(b)) || a.localeCompare(b,'ko'));
       const rows = keys.map(k => { const list = m[k].sort(byClass); const h = list.reduce((s,r)=>s+num(r.hours),0);
         const subj = [...new Set(list.map(r=>r.subject).filter(Boolean))].join(', ');
-        return `<tr><td class="l"><b>${esc(k)}</b></td><td>${esc(subj)}</td><td class="wrap">${list.map(r=>`<span class="tag t${gN(r.grade)}">${clsName(r)} ${esc(r.subject||'')} ${num(r.hours)}</span>`).join('')}</td><td><b>${h}</b></td></tr>`; });
+        return `<tr><td class="l"><b>${esc(k)}</b></td><td class="nar">${esc(subj)}</td><td class="wrap">${list.map(r=>`<span class="tag t${gN(r.grade)}">${clsName(r)} ${esc(r.subject||'')} ${num(r.hours)}</span>`).join('')}</td><td><b>${h}</b></td></tr>`; });
       if (keys.length) rows.push(`<tr class="tot"><td class="l">합계</td><td>${keys.length}명</td><td></td><td>${tot}</td></tr>`);
-      body = tbl(['교사','교과','담당 학급 (학급 과목 시수)','주당 시수'], rows, {left:[0]});
+      body = tbl(['교사','교과','담당 학급 (학급 · 과목 · 시수)','시수'], rows, {left:[0,2], cls:'tight'});
     }
     if (S.lv==='class'){
       const m = {};
