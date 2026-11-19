@@ -4,16 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>마석중학교 학교 현황</title>
-<meta name="theme-color" content="#1f5f8b">
+<meta name="theme-color" content="#3953a4">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="마석중">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <style>
-:root{--c:#1f5f8b;--c2:#e8f1f8;--line:#e2e5ea;--bg:#f4f6f8}
+:root{--c:#3953a4;--c2:#eaeef9;--line:#e2e5ea;--bg:#f4f6f8}
 *{box-sizing:border-box}
 body{margin:0;font-family:-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;background:var(--bg);color:#222;font-size:15px}
 button{font-family:inherit;cursor:pointer}
 .top{position:sticky;top:0;z-index:5;background:var(--c);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:10px 12px;gap:8px}
-.title{font-weight:700;font-size:17px}
+.title{font-weight:700;font-size:17px;white-space:nowrap;display:flex;align-items:center;gap:8px}
+.title img{width:30px;height:30px;border-radius:50%;background:#fff}
 .top select{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.5)}
 .top select option{color:#222}
 .tabs{display:flex;overflow-x:auto;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:50px;z-index:4}
@@ -63,16 +68,66 @@ h3.sec{margin:16px 2px 8px;font-size:16px}
 input,select,textarea{font-size:15px;padding:8px;border:1px solid #ccc;border-radius:8px;background:#fff;font-family:inherit}
 .frow input{flex:1;min-width:120px}
 .btns{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
-.login{text-align:center;padding:80px 20px}.login .logo{font-size:56px}
+.login{text-align:center;padding:70px 20px}.login .logo img{width:150px;height:150px;filter:drop-shadow(0 3px 8px rgba(0,0,0,.18))}.login h2{color:var(--c);margin:18px 0 6px}
 .badge{white-space:nowrap;background:#fff;color:var(--c);border-radius:8px;padding:3px 8px;font-size:12px;font-weight:700}
 .tag{display:inline-block;background:var(--c2);color:var(--c);border-radius:6px;padding:1px 7px;margin:2px;font-size:13px}
 #toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:#333;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;z-index:50;display:none}
 @media(min-width:700px){.modal{align-items:center}.sheet{border-radius:16px}}
 @media print{.top,.tabs,.noprint,.btn,.mini{display:none !important}body{background:#fff}.card,.tw,.bars,.stat{box-shadow:none;border:1px solid #ddd}main{max-width:none}}
+
+/* ================= 가독성 높이기 (태블릿용) ================= */
+/* ① 글자 크게 */
+body{font-size:17px;line-height:1.5}
+.top{min-height:58px;padding:10px 16px}
+.title{font-size:19px}.title img{width:34px;height:34px}
+.top select{font-size:16px;padding:7px 10px}
+table.t{font-size:16.5px}
+.t th{font-size:15px;font-weight:700;color:#444}
+.stat{padding:14px 10px}.stat small{font-size:14px}.stat b{font-size:28px}
+.stats{grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+h3.sec{font-size:19px;margin:22px 2px 10px}
+.hint{font-size:15px}
+.bar{font-size:16px;margin:8px 0}.bar .n{width:130px;flex-basis:130px}.bar .g{height:26px}.bar .v{width:84px;flex-basis:84px;font-size:15px}
+.bars h4{font-size:17px;margin-bottom:12px}
+.tag{font-size:15px;padding:3px 9px;margin:3px}
+input,select,textarea{font-size:17px;padding:10px}
+.frow>label{font-size:16px;min-width:100px}
+/* ② 표를 시원하게: 줄 간격 넓히기 + 한 줄씩 옅은 색 */
+.t th,.t td{padding:13px 14px;border-bottom:1px solid #e6e9ef}
+.t tbody tr:nth-child(even):not(.sub):not(.tot) td{background:#f7f8fc}
+.t tr.click:hover td{background:#eef3fb !important}
+.t tr.sub td{background:#eef1f8;border-top:2px solid #d7dceb}
+.t tr.tot td{background:var(--c2);border-top:2px solid var(--c)}
+.t th{border-bottom:2px solid #d7dceb}
+/* ③ 긴 내용은 아래로 줄바꿈 */
+.t td.wrap{white-space:normal;min-width:260px;max-width:620px;line-height:1.6}
+.tlist{margin:0;padding:0;list-style:none}
+.tlist li{position:relative;padding:3px 0 3px 16px;border-bottom:1px dashed #e6e9ef}
+.tlist li:last-child{border-bottom:0}
+.tlist li:before{content:'';position:absolute;left:3px;top:13px;width:6px;height:6px;border-radius:50%;background:var(--c)}
+/* ④ 메뉴·버튼 크게 (손가락으로 누르기 쉽게) */
+.tabs{top:58px}
+.tabs button{flex:1 0 auto;padding:16px 20px;font-size:17px;border-bottom-width:4px}
+.chip{padding:10px 18px;font-size:16px;margin:4px;border-radius:22px}
+.btn{padding:13px 20px;font-size:17px;border-radius:12px}
+.mini{padding:8px 13px;font-size:15px;border-radius:10px}
+/* ⑤ 학년별 색 */
+:root{--g1:#2e9d5b;--g1b:#e6f5ec;--g2:#d9821b;--g2b:#fdf1e2;--g3:#8a4fc2;--g3b:#f3ecfb}
+.gb{display:inline-block;min-width:54px;border-radius:8px;padding:3px 10px;font-weight:700;color:#fff}
+.gb.g1{background:var(--g1)}.gb.g2{background:var(--g2)}.gb.g3{background:var(--g3)}
+.t tr.r1 td:first-child{box-shadow:inset 6px 0 0 var(--g1)}
+.t tr.r2 td:first-child{box-shadow:inset 6px 0 0 var(--g2)}
+.t tr.r3 td:first-child{box-shadow:inset 6px 0 0 var(--g3)}
+.t tr.sub.r1 td{background:var(--g1b)}.t tr.sub.r2 td{background:var(--g2b)}.t tr.sub.r3 td{background:var(--g3b)}
+.tag.t1{background:var(--g1b);color:#1f6e40}.tag.t2{background:var(--g2b);color:#93560d}.tag.t3{background:var(--g3b);color:#5e3192}
+.card.c1{border-left:6px solid var(--g1)}.card.c2{border-left:6px solid var(--g2)}.card.c3{border-left:6px solid var(--g3)}
+.legend{display:flex;gap:14px;align-items:center;font-size:15px;color:#555;margin:4px 2px 10px;flex-wrap:wrap}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:4px;margin-right:5px;vertical-align:-2px}
+@media print{.t tbody tr:nth-child(even) td{background:#fff}}
 </style>
 </head>
 <body>
-<div id="app"><p class="empty">불러오는 중...</p></div>
+<div id="app"><div class="login"><div class="logo"><img src="logo.png" alt="마석중학교"></div><p class="empty">불러오는 중...</p></div></div>
 <div id="modal" class="modal hidden" onclick="if(event.target===this)App.closeM()"></div>
 <div id="toast"></div>
 
@@ -153,6 +208,12 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6
 const num = v => { const n = parseFloat(String(v??'').replace(/[^0-9.\-]/g,'')); return isNaN(n) ? 0 : n; };
 const chip = (label,on,act) => `<button class="chip ${on?'on':''}" onclick="${act}">${esc(label)}</button>`;
 const clsName = r => `${r.grade}-${r.cls}`;
+// 학년별 색 (1학년 초록 · 2학년 주황 · 3학년 보라)
+const gN = g => { const n = num(g); return n>=1 && n<=3 ? n : 0; };
+const gBadge = r => `<span class="gb g${gN(r.grade)}">${esc(r.grade)}학년</span>`;
+const legend = `<div class="legend"><span><i style="background:var(--g1)"></i>1학년</span><span><i style="background:var(--g2)"></i>2학년</span><span><i style="background:var(--g3)"></i>3학년</span></div>`;
+// 업무 여러 개를 한 줄씩 목록으로
+const tlist = arr => arr.length ? `<ul class="tlist">${arr.map(t=>`<li>${esc(t)}</li>`).join('')}</ul>` : '';
 const byClass = (a,b) => num(a.grade)-num(b.grade) || num(a.cls)-num(b.cls);
 function toast(m){ const t=$('#toast'); t.textContent=m; t.style.display='block'; clearTimeout(toast.t); toast.t=setTimeout(()=>t.style.display='none',2300); }
 function tbl(heads, rows, opts={}){
@@ -208,7 +269,7 @@ async function initFirebase(){
   fb = {db, auth, A, F};
   A.onAuthStateChanged(auth, async user => {
     if (user){ fb.uid = user.uid; S.user = user; $('#app').innerHTML = '<p class="empty">불러오는 중...</p>'; await loadYear(S.year); render(); }
-    else { S.user = null; $('#app').innerHTML = `<div class="login"><div class="logo">🏫</div><h2>${SCHOOL} 학교 현황</h2><p>구글 계정으로 로그인하세요.</p><button class="btn" onclick="App.login()">구글로 로그인</button></div>`; }
+    else { S.user = null; $('#app').innerHTML = `<div class="login"><div class="logo"><img src="logo.png" alt="마석중학교"></div><h2>${SCHOOL} 학교 현황</h2><p>구글 계정으로 로그인하세요.</p><button class="btn" onclick="App.login()">구글로 로그인</button></div>`; }
   });
 }
 
@@ -219,7 +280,7 @@ const TABS = [['classes','학급 현황'],['lessons','수업 현황'],['teachers
 const YEARS = Array.from({length:7},(_,i)=>String(curSchoolYear-1+i));
 function render(){
   $('#app').innerHTML = `
-  <header class="top"><div class="title">🏫 ${SCHOOL} 학교 현황</div>
+  <header class="top"><div class="title"><img src="logo.png" alt="">${SCHOOL} 학교 현황</div>
     <span>${USE_FB?'':'<span class="badge">연습 모드</span> '}<select onchange="App.setYear(this.value)">${YEARS.map(y=>`<option value="${y}" ${y===S.year?'selected':''}>${y}학년도</option>`).join('')}</select>
     ${USE_FB&&S.user?' <button class="mini" onclick="App.logout()">로그아웃</button>':''}</span></header>
   <nav class="tabs">${TABS.map(([k,n])=>`<button class="${S.tab===k?'on':''}" onclick="App.setTab('${k}')">${n}</button>`).join('')}</nav>
@@ -239,18 +300,19 @@ const VIEWS = {
     const B = L.reduce((s,r)=>s+num(r.boys),0), G = L.reduce((s,r)=>s+num(r.girls),0);
     const rows = []; let g = null, gb = 0, gg = 0, gn = 0;
     const pad = xh('classes').map(()=>'<td></td>').join('');
-    const subtotal = () => rows.push(`<tr class="sub"><td>${g}학년 계</td><td>${gn}학급</td><td></td><td></td><td></td><td></td><td>${gb}</td><td>${gg}</td><td>${gb+gg}</td>${pad}</tr>`);
+    const subtotal = () => rows.push(`<tr class="sub r${gN(g)}"><td>${g}학년 계</td><td>${gn}학급</td><td></td><td></td><td></td><td></td><td>${gb}</td><td>${gg}</td><td>${gb+gg}</td>${pad}</tr>`);
     for (const r of L){
       if (g!==null && r.grade!==g){ subtotal(); gb=gg=gn=0; }
       g = r.grade; gn++; gb += num(r.boys); gg += num(r.girls);
-      rows.push(`<tr class="click" onclick="App.edit('classes','${r.id}')"><td>${esc(r.grade)}학년</td><td>${esc(r.cls)}반</td><td>${esc(r.homeroom)}</td><td>${esc(r.subhome)}</td><td>${esc(r.sem1)}</td><td>${esc(r.sem2)}</td><td>${num(r.boys)}</td><td>${num(r.girls)}</td><td><b>${num(r.boys)+num(r.girls)}</b></td>${xtd('classes',r)}</tr>`);
+      rows.push(`<tr class="click r${gN(r.grade)}" onclick="App.edit('classes','${r.id}')"><td>${gBadge(r)}</td><td>${esc(r.cls)}반</td><td>${esc(r.homeroom)}</td><td>${esc(r.subhome)}</td><td>${esc(r.sem1)}</td><td>${esc(r.sem2)}</td><td>${num(r.boys)}</td><td>${num(r.girls)}</td><td><b>${num(r.boys)+num(r.girls)}</b></td>${xtd('classes',r)}</tr>`);
     }
     if (L.length){ subtotal(); rows.push(`<tr class="tot"><td>합계</td><td>${L.length}학급</td><td></td><td></td><td></td><td></td><td>${B}</td><td>${G}</td><td>${B+G}</td>${pad}</tr>`); }
     return `<div class="stats">${stat('학급 수',L.length)}${stat('남학생',B)}${stat('여학생',G)}${stat('전체 학생',B+G)}${stat('학급당 평균',L.length?(Math.round((B+G)/L.length*10)/10):0)}</div>
     <div class="row between"><div class="chips noprint">${chip('표로 보기',S.cv==='table',"App.set('cv','table')")}${chip('학급 카드 (생활협약)',S.cv==='card',"App.set('cv','card')")}</div><span>${printBtn} <button class="btn noprint" onclick="App.add('classes')">+ 학급 추가</button></span></div>
+    ${legend}
     ${S.cv==='card'
-      ? `<div class="grid2">${L.map(r=>`<div class="card" style="cursor:pointer" onclick="App.edit('classes','${r.id}')">
-          <div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:18px;color:var(--c)">${clsName(r)}</b><small>남 ${num(r.boys)} · 여 ${num(r.girls)} · 계 ${num(r.boys)+num(r.girls)}</small></div>
+      ? `<div class="grid2">${L.map(r=>`<div class="card c${gN(r.grade)}" style="cursor:pointer" onclick="App.edit('classes','${r.id}')">
+          <div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:21px;color:var(--g${gN(r.grade)},var(--c))">${clsName(r)}</b><small>남 ${num(r.boys)} · 여 ${num(r.girls)} · 계 ${num(r.boys)+num(r.girls)}</small></div>
           <div class="hint" style="margin:6px 0">담임 <b>${esc(r.homeroom)}</b> · 부담임 ${esc(r.subhome)||'-'}</div>
           <div class="hint" style="margin:4px 0">반장 1학기 <b>${esc(r.sem1)||'-'}</b> · 2학기 <b>${esc(r.sem2)||'-'}</b></div>
           ${r.pledge?`<div style="background:var(--c2);border-radius:8px;padding:8px;margin-top:6px;white-space:pre-line">🤝 ${esc(r.pledge)}</div>`:''}
@@ -273,7 +335,7 @@ const VIEWS = {
       const keys = Object.keys(m).sort((a,b)=> (order.indexOf(a)<0?999:order.indexOf(a)) - (order.indexOf(b)<0?999:order.indexOf(b)) || a.localeCompare(b,'ko'));
       const rows = keys.map(k => { const list = m[k].sort(byClass); const h = list.reduce((s,r)=>s+num(r.hours),0);
         const subj = [...new Set(list.map(r=>r.subject).filter(Boolean))].join(', ');
-        return `<tr><td class="l"><b>${esc(k)}</b></td><td>${esc(subj)}</td><td class="wrap">${list.map(r=>`<span class="tag">${clsName(r)} ${esc(r.subject||'')} ${num(r.hours)}</span>`).join('')}</td><td><b>${h}</b></td></tr>`; });
+        return `<tr><td class="l"><b>${esc(k)}</b></td><td>${esc(subj)}</td><td class="wrap">${list.map(r=>`<span class="tag t${gN(r.grade)}">${clsName(r)} ${esc(r.subject||'')} ${num(r.hours)}</span>`).join('')}</td><td><b>${h}</b></td></tr>`; });
       if (keys.length) rows.push(`<tr class="tot"><td class="l">합계</td><td>${keys.length}명</td><td></td><td>${tot}</td></tr>`);
       body = tbl(['교사','교과','담당 학급 (학급 과목 시수)','주당 시수'], rows, {left:[0]});
     }
@@ -282,7 +344,7 @@ const VIEWS = {
       for (const r of L){ const k = clsName(r); (m[k] = m[k]||{grade:r.grade,cls:r.cls,list:[]}).list.push(r); }
       const keys = Object.values(m).sort(byClass);
       const rows = keys.map(c => { const h = c.list.reduce((s,r)=>s+num(r.hours),0);
-        return `<tr><td><b>${clsName(c)}</b></td><td class="wrap">${c.list.map(r=>`<span class="tag">${esc(r.subject||'')} ${num(r.hours)} (${esc(r.teacher)})</span>`).join('')}</td><td><b>${h}</b></td></tr>`; });
+        return `<tr class="r${gN(c.grade)}"><td><b>${clsName(c)}</b></td><td class="wrap">${c.list.map(r=>`<span class="tag">${esc(r.subject||'')} ${num(r.hours)} (${esc(r.teacher)})</span>`).join('')}</td><td><b>${h}</b></td></tr>`; });
       body = tbl(['학급','과목별 시수 (교사)','주당 시수'], rows);
     }
     if (S.lv==='subject'){
@@ -297,15 +359,15 @@ const VIEWS = {
       const cell = (t,c) => L.filter(r=>r.teacher===t && clsName(r)===clsName(c)).reduce((s,r)=>s+num(r.hours),0);
       const rows = teachers.map(t => `<tr><td class="l"><b>${esc(t)}</b></td>${classes.map(c=>{const v=cell(t,c);return `<td>${v||''}</td>`;}).join('')}<td><b>${L.filter(r=>r.teacher===t).reduce((s,r)=>s+num(r.hours),0)}</b></td></tr>`);
       if (teachers.length) rows.push(`<tr class="tot"><td class="l">학급 계</td>${classes.map(c=>`<td>${L.filter(r=>clsName(r)===clsName(c)).reduce((s,r)=>s+num(r.hours),0)}</td>`).join('')}<td>${tot}</td></tr>`);
-      body = tbl(['교사 \\ 학급', ...classes.map(clsName), '계'], rows, {left:[0]});
+      body = tbl(['교사 \\ 학급', ...classes.map(c=>`<span class="gb g${gN(c.grade)}" style="min-width:0">${clsName(c)}</span>`), '계'], rows, {left:[0]});
     }
     if (S.lv==='list'){
       const rows = [...L].sort((a,b)=>(a.teacher||'').localeCompare(b.teacher||'','ko')||byClass(a,b))
-        .map(r=>`<tr class="click" onclick="App.edit('lessons','${r.id}')"><td class="l">${esc(r.teacher)}</td><td>${clsName(r)}</td><td>${esc(r.subject)}</td><td>${num(r.hours)}</td>${xtd('lessons',r)}</tr>`);
+        .map(r=>`<tr class="click r${gN(r.grade)}" onclick="App.edit('lessons','${r.id}')"><td class="l">${esc(r.teacher)}</td><td>${clsName(r)}</td><td>${esc(r.subject)}</td><td>${num(r.hours)}</td>${xtd('lessons',r)}</tr>`);
       body = `<div class="row noprint"><button class="btn" onclick="App.add('lessons')">+ 수업 추가</button></div>` + tbl(['교사','학급','교과','주당 시수',...xth('lessons')], rows, {left:[0]});
     }
     return `<div class="stats">${stat('수업 줄 수',L.length)}${stat('주당 총 시수',tot)}${stat('수업 교사',new Set(L.map(r=>r.teacher)).size+'명')}</div>
-    <div class="row between noprint"><div class="chips">${views.map(([k,n])=>chip(n,S.lv===k,`App.set('lv','${k}')`)).join('')}</div>${printBtn}</div>${body}`;
+    <div class="row between noprint"><div class="chips">${views.map(([k,n])=>chip(n,S.lv===k,`App.set('lv','${k}')`)).join('')}</div>${printBtn}</div>${S.lv==='subject'?'':legend}${body}`;
   },
 
   // ----- 교사 현황 -----
@@ -346,17 +408,17 @@ const VIEWS = {
       const order = S.D.teachers.map(t=>t.name);
       const keys = Object.keys(m);   // 시트 순서(부서 순) 그대로
       body = tbl(['교사','부서','담당 업무','업무 수'], keys.map(k=>{ const T = m[k].flatMap(r=>tasks(r.task));
-        return `<tr><td class="l"><b>${esc(k)}</b></td><td>${esc([...new Set(m[k].map(r=>r.dept).filter(Boolean))].join(', '))}</td><td class="wrap">${T.map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</td><td><b>${T.length}</b></td></tr>`; }), {left:[0]});
+        return `<tr><td class="l"><b>${esc(k)}</b></td><td>${esc([...new Set(m[k].map(r=>r.dept).filter(Boolean))].join(', '))}</td><td class="wrap">${tlist(T)}</td><td><b>${T.length}</b></td></tr>`; }), {left:[0]});
     }
     if (S.dv==='dept'){
       const m = {}; L.forEach(r=>{ const k=r.dept||'(부서 미정)'; (m[k]=m[k]||[]).push(r); });
       body = bars('부서별 인원', Object.entries(m).map(([d,l])=>[d,new Set(l.map(r=>r.teacher)).size])) +
         Object.entries(m).map(([d,list]) => `<h3 class="sec">${esc(d)} <small style="color:#888">${new Set(list.map(r=>r.teacher)).size}명 · 업무 ${list.flatMap(r=>tasks(r.task)).length}개</small></h3>`
-        + tbl(['교사','업무'], list.map(r=>`<tr><td class="l"><b>${esc(r.teacher)}</b></td><td class="wrap">${tasks(r.task).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</td></tr>`), {left:[0]})).join('') || tbl(['교사','업무'],[]);
+        + tbl(['교사','업무'], list.map(r=>`<tr><td class="l"><b>${esc(r.teacher)}</b></td><td class="wrap">${tlist(tasks(r.task))}</td></tr>`), {left:[0]})).join('') || tbl(['교사','업무'],[]);
     }
     if (S.dv==='list'){
       body = `<div class="row noprint"><button class="btn" onclick="App.add('duties')">+ 업무 추가</button></div>` +
-        tbl(['교사','부서','업무',...xth('duties')], L.map(r=>`<tr class="click" onclick="App.edit('duties','${r.id}')"><td class="l">${esc(r.teacher)}</td><td>${esc(r.dept)}</td><td class="wrap">${esc(r.task)}</td>${xtd('duties',r)}</tr>`), {left:[0]});
+        tbl(['교사','부서','업무',...xth('duties')], L.map(r=>`<tr class="click" onclick="App.edit('duties','${r.id}')"><td class="l">${esc(r.teacher)}</td><td>${esc(r.dept)}</td><td class="wrap">${tlist(tasks(r.task))}</td>${xtd('duties',r)}</tr>`), {left:[0]});
     }
     return `<div class="stats">${stat('업무 항목',L.flatMap(r=>tasks(r.task)).length)}${stat('부서 수',new Set(L.map(r=>r.dept).filter(Boolean)).size)}${stat('담당 교사',new Set(L.map(r=>r.teacher)).size+'명')}</div>
     <div class="row between noprint"><div class="chips">${views.map(([k,n])=>chip(n,S.dv===k,`App.set('dv','${k}')`)).join('')}</div>${printBtn}</div>${body}`;
