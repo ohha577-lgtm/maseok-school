@@ -91,6 +91,12 @@ const firebaseConfig = {
 };
 const SCHOOL = '마석중학교';
 
+// 연결할 구글시트 주소 (「마석중학교 학교 현황 기초 자료」)
+//  - 다른 시트로 바꾸려면 시트 주소를 통째로 붙여 넣어도 됩니다.
+const SHEET_URL = 'https://docs.google.com/spreadsheets/d/1azre_7W8iuLcAHVGcbqTzf1GNfNbpHhRrRCtEu1zpzs/edit';
+const SHEET_ID = (SHEET_URL.match(/\/d\/([\w-]+)/) || [,SHEET_URL])[1];
+const SHEET_SKIP = ['안내'];   // 앱에 넣지 않을 탭 이름
+
 // =====================================================================
 // ② 표의 모양 (구글시트의 첫 줄 제목과 같게 맞춰 두었습니다)
 //    [저장 이름, 화면 제목, 다른 이름들(붙여넣기 때 알아보는 제목), 숫자인지]
@@ -136,7 +142,8 @@ const now = new Date();
 const curSchoolYear = now.getMonth() < 2 ? now.getFullYear()-1 : now.getFullYear(); // 3월에 새 학년도
 const S = {
   year: String(curSchoolYear), tab:'classes', D:empty(), user:null,
-  lv:'teacher', dv:'teacher', cv:'table', imp:{kind:'teachers', text:'', mode:'replace', rows:null}, e:{}
+  lv:'teacher', dv:'teacher', cv:'table', imp:{kind:'teachers', text:'', mode:'replace', rows:null}, e:{},
+  sync:null, gtoken:null, gtime:0
 };
 function empty(){ return {teachers:[], classes:[], lessons:[], duties:[], xcols:{}, custom:[]}; }
 
@@ -380,8 +387,26 @@ const VIEWS = {
       ${I.rows.length>200?'<p class="hint">200줄까지만 미리 보여 줍니다.</p>':''}
       <div class="btns">${ok.length?`<button class="btn" onclick="App.impSave()">${I.mode==='replace'?`${sc.name} 자료를 이것으로 바꾸기`:`${ok.length}줄 이어서 추가하기`}</button>`:''}</div>`;
     }
+    const Y = S.sync;
+    let syncBody = '';
+    if (Y){
+      syncBody = `<h3 class="sec">불러온 자료 · 「${esc(Y.file)}」 <small style="color:#888">${Y.time.toLocaleTimeString('ko-KR')}</small></h3>
+      ${tbl(['시트 탭','지금 앱','시트에서 읽음','확인'], Y.tabs.map(t=>`<tr><td><b>${esc(t.title)}</b></td><td>${S.D[t.kind].length}줄</td><td>${t.ok.length}줄</td><td class="wrap" style="color:${t.bad.length?'#c00':'#2a9d55'}">${t.bad.length?`오류 ${t.bad.length}줄 (넣지 않음): ${t.bad.slice(0,3).map(r=>esc(r._err)).join(', ')}`:'✓'}${(t.rows.extras||[]).length?`<br><span style="color:#555">➕ 추가한 칸: ${t.rows.extras.map(esc).join(', ')}</span>`:''}</td></tr>`)
+        .concat(Y.custom.map(c=>`<tr><td><b>${esc(c.name)}</b></td><td>${(S.D.custom||[]).find(x=>x.name===c.name)?.rows.length ?? 0}줄</td><td>${c.rows.length}줄</td><td>기타 자료로 넣음</td></tr>`)))}
+      ${Y.tabs.length?'':'<p class="hint" style="color:#c00">교사·학급·수업·업무 탭을 찾지 못했습니다. 시트 탭 이름을 확인하세요.</p>'}
+      <div class="btns"><button class="btn" onclick="App.syncSave()">${S.year}학년도 자료를 시트 내용으로 바꾸기</button><button class="btn ghost" onclick="App.syncCancel()">취소</button></div>`;
+    }
     return `<div class="card">
-      <h3 style="margin:0 0 8px">📋 구글시트에서 한꺼번에 넣기</h3>
+      <h3 style="margin:0 0 8px">🔗 연결된 구글시트에서 바로 불러오기</h3>
+      <p class="hint">시트를 고친 뒤 이 버튼만 누르면 됩니다. 복사·붙여넣기가 필요 없습니다.<br>
+      처음 누를 때 구글 창이 뜨면 <b>시트 주인 계정</b>을 고르고 "보기 허용"을 눌러 주세요. (읽기만 하고 시트를 고치지는 않습니다)</p>
+      <div class="row"><button class="btn" onclick="App.syncLoad()">구글시트에서 불러오기</button>
+        <a class="mini" href="${esc(SHEET_URL)}" target="_blank" style="text-decoration:none">시트 열기 ↗</a></div>
+      ${USE_FB?'':'<p class="hint" style="color:#c00">지금은 연습 모드라 이 버튼을 쓸 수 없습니다. 맨 위 ① 파이어베이스 설정을 먼저 채워 주세요. 그 전에는 아래 복사·붙여넣기 방법을 쓰세요.</p>'}
+      ${syncBody}
+    </div>
+    <div class="card">
+      <h3 style="margin:0 0 8px">📋 구글시트에서 복사해서 넣기 (예비 방법)</h3>
       <div class="frow"><label>어떤 표?</label><div class="chips">${KINDS.map(k=>chip(`${SCHEMA[k].name} (${S.D[k].length})`,I.kind===k,`App.impKind('${k}')`)).join('')}${chip('+ 새 표 (시트에 만든 다른 탭)',I.kind==='custom',"App.impKind('custom')")}</div></div>
       ${I.kind==='custom'
         ? `<div class="frow"><label>표 이름</label><input value="${esc(I.name||'')}" oninput="App.impName(this.value)" placeholder="예: 동아리 현황 (시트 탭 이름 그대로)"></div>
@@ -427,9 +452,11 @@ function parseTSV(text){
   return rows.filter(r => r.some(v => String(v).trim()));
 }
 const norm = s => String(s||'').replace(/[\s()\[\]·:.\-_/]/g,'').trim();
-function parsePaste(text, kind){
+function parsePaste(text, kind){ return parseLines(parseTSV(text), kind); }
+// 줄 목록(시트에서 바로 읽어 온 것 또는 붙여 넣은 것)을 앱 자료로 바꾸기
+function parseLines(lines, kind){
   const sc = SCHEMA[kind];
-  let lines = parseTSV(text);
+  lines = (lines||[]).map(l => l.map(v => String(v??''))).filter(r => r.some(v => v.trim()));
   if (!lines.length) return [];
   const split = l => l;                      // 이미 칸별로 나뉘어 있음
   let head = lines[0].map(norm);
@@ -466,6 +493,60 @@ function parseCustom(text){
   const cols = lines[0].map(h=>String(h).trim());
   const rows = lines.slice(1).map(v => cols.map((_,i)=>String(v[i]??'').trim())).filter(r=>r.some(Boolean));
   return {cols, rows};
+}
+
+// =====================================================================
+// ⑥-2 구글시트에서 바로 불러오기
+//    내 구글 계정으로 한 번 더 허락을 받아(읽기만 가능) 시트를 읽습니다.
+//    시트를 인터넷에 공개하지 않아도 됩니다.
+// =====================================================================
+const SHEET_SCOPE = 'https://www.googleapis.com/auth/spreadsheets.readonly';
+async function sheetToken(){
+  if (S.gtoken && Date.now() - S.gtime < 50*60*1000) return S.gtoken;   // 50분 안에는 다시 묻지 않음
+  const p = new fb.A.GoogleAuthProvider();
+  p.addScope(SHEET_SCOPE);
+  if (S.user && S.user.email) p.setCustomParameters({login_hint: S.user.email});
+  const res = await fb.A.signInWithPopup(fb.auth, p);
+  const cred = fb.A.GoogleAuthProvider.credentialFromResult(res);
+  if (!cred || !cred.accessToken) throw new Error('구글 허락을 받지 못했습니다');
+  S.gtoken = cred.accessToken; S.gtime = Date.now();
+  return S.gtoken;
+}
+async function sheetGet(path, token){
+  const r = await fetch('https://sheets.googleapis.com/v4/spreadsheets/' + SHEET_ID + path, {headers:{Authorization:'Bearer '+token}});
+  if (!r.ok){
+    let msg = ''; try{ msg = (await r.json()).error.message; }catch(e){}
+    if (r.status===401) S.gtoken = null;
+    const why = {401:'허락 시간이 지났습니다. 한 번 더 눌러 주세요.',
+                 403:'시트를 읽을 권한이 없습니다. 시트 주인 계정으로 로그인했는지, 구글 클라우드에서 Google Sheets API를 켰는지 확인하세요.',
+                 404:'시트를 찾을 수 없습니다. SHEET_URL 주소를 확인하세요.'}[r.status];
+    throw new Error(why || ('오류 '+r.status+' '+msg));
+  }
+  return r.json();
+}
+async function readSheet(){
+  const token = await sheetToken();
+  const meta = await sheetGet('?fields=properties.title,sheets.properties.title', token);
+  const titles = meta.sheets.map(s=>s.properties.title).filter(t=>!SHEET_SKIP.includes(t));
+  const q = titles.map(t=>'ranges='+encodeURIComponent("'"+t.replace(/'/g,"''")+"'")).join('&');
+  const data = await sheetGet('/values:batchGet?majorDimension=ROWS&valueRenderOption=FORMATTED_VALUE&'+q, token);
+  const byName = {}; KINDS.forEach(k => byName[SCHEMA[k].name] = k);
+  const tabs = [], custom = [];
+  data.valueRanges.forEach((vr,i) => {
+    const title = titles[i], lines = vr.values || [];
+    const kind = byName[title];
+    if (kind){
+      const rows = parseLines(lines, kind);
+      tabs.push({kind, title, rows, ok: rows.filter(r=>!r._err), bad: rows.filter(r=>r._err)});
+    } else {
+      const L = lines.map(l=>l.map(v=>String(v??'').trim())).filter(r=>r.some(Boolean));
+      if (L.length > 1){
+        const cols = L[0];
+        custom.push({name:title, cols, rows: L.slice(1).map(v => cols.map((_,j)=>v[j]??''))});
+      }
+    }
+  });
+  return {file: meta.properties.title, tabs, custom, time: new Date()};
 }
 
 // =====================================================================
@@ -513,6 +594,36 @@ window.App = {
   edel(){
     if (!confirm('이 줄을 지울까요?')) return;
     const {kind, r} = S.e; S.D[kind] = S.D[kind].filter(x=>x.id!==r.id); save(); App.closeM(); render();
+  },
+
+  async syncLoad(){
+    if (!USE_FB) return toast('파이어베이스를 연결한 뒤에 쓸 수 있습니다');
+    toast('구글시트를 읽는 중...');
+    try { S.sync = await readSheet(); render(); toast('다 읽었습니다. 아래 표를 확인하고 바꾸기를 누르세요'); }
+    catch(e){
+      console.error(e);
+      if (e.code==='auth/popup-closed-by-user' || e.code==='auth/cancelled-popup-request') return toast('구글 창을 닫아서 취소했습니다');
+      if (e.code==='auth/popup-blocked') return toast('팝업이 막혔습니다. 브라우저에서 팝업을 허용해 주세요');
+      alert('불러오지 못했습니다.\n\n' + (e.message || e.code || e));
+    }
+  },
+  syncCancel(){ S.sync = null; render(); },
+  syncSave(){
+    const Y = S.sync; if (!Y) return;
+    const msg = Y.tabs.map(t=>`· ${t.title}: ${S.D[t.kind].length}줄 → ${t.ok.length}줄`).concat(Y.custom.map(c=>`· ${c.name}: ${c.rows.length}줄 (기타 자료)`)).join('\n');
+    if (!confirm(`${S.year}학년도 자료를 시트 내용으로 바꿀까요?\n\n${msg}\n\n앱에서 직접 고친 내용은 시트 내용으로 덮어씁니다.`)) return;
+    S.D.xcols = S.D.xcols || {};
+    Y.tabs.forEach(t => {
+      S.D[t.kind] = t.ok.map(r=>{ const x={...r}; delete x._err; return x; });
+      S.D.xcols[t.kind] = t.rows.extras || [];
+    });
+    S.D.custom = S.D.custom || [];
+    Y.custom.forEach(c => {
+      const old = S.D.custom.find(x=>x.name===c.name);
+      const rec = {id: old?old.id:uid(), name:c.name, cols:c.cols, rows:c.rows.map(r=>({c:r}))};
+      if (old) Object.assign(old, rec); else S.D.custom.push(rec);
+    });
+    save(); S.sync = null; S.tab = 'classes'; render(); toast('시트 내용으로 바꿨습니다');
   },
 
   impKind(k){ S.imp.kind = k; S.imp.rows = null; render(); },
