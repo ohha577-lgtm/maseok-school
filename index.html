@@ -4,16 +4,21 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <title>마석중학교 학교 현황</title>
-<meta name="theme-color" content="#1f5f8b">
+<meta name="theme-color" content="#3953a4">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" sizes="32x32" href="icon-32.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-title" content="마석중">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <style>
-:root{--c:#1f5f8b;--c2:#e8f1f8;--line:#e2e5ea;--bg:#f4f6f8}
+:root{--c:#3953a4;--c2:#eaeef9;--line:#e2e5ea;--bg:#f4f6f8}
 *{box-sizing:border-box}
 body{margin:0;font-family:-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;background:var(--bg);color:#222;font-size:15px}
 button{font-family:inherit;cursor:pointer}
 .top{position:sticky;top:0;z-index:5;background:var(--c);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:10px 12px;gap:8px}
-.title{font-weight:700;font-size:17px}
+.title{font-weight:700;font-size:17px;white-space:nowrap;display:flex;align-items:center;gap:8px}
+.title img{width:30px;height:30px;border-radius:50%;background:#fff}
 .top select{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.5)}
 .top select option{color:#222}
 .tabs{display:flex;overflow-x:auto;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:50px;z-index:4}
@@ -63,7 +68,7 @@ h3.sec{margin:16px 2px 8px;font-size:16px}
 input,select,textarea{font-size:15px;padding:8px;border:1px solid #ccc;border-radius:8px;background:#fff;font-family:inherit}
 .frow input{flex:1;min-width:120px}
 .btns{display:flex;gap:8px;margin-top:14px;flex-wrap:wrap}
-.login{text-align:center;padding:80px 20px}.login .logo{font-size:56px}
+.login{text-align:center;padding:70px 20px}.login .logo img{width:150px;height:150px;filter:drop-shadow(0 3px 8px rgba(0,0,0,.18))}.login h2{color:var(--c);margin:18px 0 6px}
 .badge{white-space:nowrap;background:#fff;color:var(--c);border-radius:8px;padding:3px 8px;font-size:12px;font-weight:700}
 .tag{display:inline-block;background:var(--c2);color:var(--c);border-radius:6px;padding:1px 7px;margin:2px;font-size:13px}
 #toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:#333;color:#fff;padding:10px 16px;border-radius:20px;font-size:14px;z-index:50;display:none}
@@ -72,7 +77,7 @@ input,select,textarea{font-size:15px;padding:8px;border:1px solid #ccc;border-ra
 </style>
 </head>
 <body>
-<div id="app"><p class="empty">불러오는 중...</p></div>
+<div id="app"><div class="login"><div class="logo"><img src="logo.png" alt="마석중학교"></div><p class="empty">불러오는 중...</p></div></div>
 <div id="modal" class="modal hidden" onclick="if(event.target===this)App.closeM()"></div>
 <div id="toast"></div>
 
@@ -208,7 +213,7 @@ async function initFirebase(){
   fb = {db, auth, A, F};
   A.onAuthStateChanged(auth, async user => {
     if (user){ fb.uid = user.uid; S.user = user; $('#app').innerHTML = '<p class="empty">불러오는 중...</p>'; await loadYear(S.year); render(); }
-    else { S.user = null; $('#app').innerHTML = `<div class="login"><div class="logo">🏫</div><h2>${SCHOOL} 학교 현황</h2><p>구글 계정으로 로그인하세요.</p><button class="btn" onclick="App.login()">구글로 로그인</button></div>`; }
+    else { S.user = null; $('#app').innerHTML = `<div class="login"><div class="logo"><img src="logo.png" alt="마석중학교"></div><h2>${SCHOOL} 학교 현황</h2><p>구글 계정으로 로그인하세요.</p><button class="btn" onclick="App.login()">구글로 로그인</button></div>`; }
   });
 }
 
@@ -219,7 +224,7 @@ const TABS = [['classes','학급 현황'],['lessons','수업 현황'],['teachers
 const YEARS = Array.from({length:7},(_,i)=>String(curSchoolYear-1+i));
 function render(){
   $('#app').innerHTML = `
-  <header class="top"><div class="title">🏫 ${SCHOOL} 학교 현황</div>
+  <header class="top"><div class="title"><img src="logo.png" alt="">${SCHOOL} 학교 현황</div>
     <span>${USE_FB?'':'<span class="badge">연습 모드</span> '}<select onchange="App.setYear(this.value)">${YEARS.map(y=>`<option value="${y}" ${y===S.year?'selected':''}>${y}학년도</option>`).join('')}</select>
     ${USE_FB&&S.user?' <button class="mini" onclick="App.logout()">로그아웃</button>':''}</span></header>
   <nav class="tabs">${TABS.map(([k,n])=>`<button class="${S.tab===k?'on':''}" onclick="App.setTab('${k}')">${n}</button>`).join('')}</nav>
