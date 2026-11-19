@@ -124,6 +124,21 @@ input,select,textarea{font-size:17px;padding:10px}
 .legend{display:flex;gap:14px;align-items:center;font-size:15px;color:#555;margin:4px 2px 10px;flex-wrap:wrap}
 .legend i{display:inline-block;width:14px;height:14px;border-radius:4px;margin-right:5px;vertical-align:-2px}
 @media print{.t tbody tr:nth-child(even) td{background:#fff}}
+/* 파일 자료 */
+.upl{background:var(--c2);color:var(--c);font-weight:700;border-radius:10px;padding:12px 14px;margin:8px 0}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin:8px 0 12px}
+.fthumb{background:#f4f6fa;border-radius:12px;overflow:hidden;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.fthumb img{width:100%;height:130px;object-fit:cover;display:block}
+.fthumb .fic{height:130px;display:flex;align-items:center;justify-content:center;font-size:48px}
+.fthumb .fn{font-size:14px;padding:7px 9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.flist{border-top:1px solid #eceef3}
+.fitem{display:flex;align-items:center;gap:12px;padding:13px 6px;border-bottom:1px solid #eceef3;cursor:pointer}
+.fitem:hover{background:#f6f8fc}
+.fic2{font-size:30px;flex:0 0 auto}
+.fmain{flex:1;min-width:0}.fmain b{display:block;font-weight:600;word-break:break-all}.fmain small{color:#777;font-size:14px}
+.fmeta{flex:0 0 auto;text-align:right;color:#888;font-size:14px;line-height:1.4}
+.fbig{text-align:center;background:#f4f6fa;border-radius:12px;padding:26px 12px;font-size:64px}
+.fbig div{font-size:17px;font-weight:700;margin-top:6px;word-break:break-all}.fbig small{font-size:14px;color:#777}
 </style>
 </head>
 <body>
@@ -198,7 +213,8 @@ const curSchoolYear = now.getMonth() < 2 ? now.getFullYear()-1 : now.getFullYear
 const S = {
   year: String(curSchoolYear), tab:'classes', D:empty(), user:null,
   lv:'teacher', dv:'teacher', cv:'table', imp:{kind:'teachers', text:'', mode:'replace', rows:null}, e:{},
-  sync:null, gtoken:null, gtime:0
+  sync:null, gtoken:null, gtime:0,
+  files:[], ff:'all', upl:'', fcache:{}
 };
 function empty(){ return {teachers:[], classes:[], lessons:[], duties:[], xcols:{}, custom:[]}; }
 
@@ -248,6 +264,7 @@ async function loadYear(y){
   if (!USE_FB){ S.D = {...empty(), ...(lsAll()[y]||{})}; return; }
   const snap = await fb.F.getDoc(fb.F.doc(fb.db,'users',fb.uid,'years',y));
   S.D = {...empty(), ...(snap.exists() ? snap.data() : {})};
+  await loadFiles(y);
 }
 async function getYear(y){   // 다른 학년도 자료 읽기 (복사용)
   if (!USE_FB) return lsAll()[y] || null;
@@ -260,6 +277,57 @@ function save(){
   fb.F.setDoc(fb.F.doc(fb.db,'users',fb.uid,'years',S.year), {...data, updated:Date.now()})
     .catch(e => { console.error(e); toast('저장 실패: 인터넷 연결을 확인하세요'); });
 }
+// =====================================================================
+// ④-2 파일 자료 (사진·PDF·한글 파일 등)
+//    파일을 작은 조각으로 나눠 파이어베이스에 저장합니다. 따로 설정할 것은 없습니다.
+// =====================================================================
+const FILE_MAX = 20*1024*1024;   // 파일 하나 20MB까지
+const PART = 600*1024;           // 조각 하나 크기
+const FTYPES = [['photo','사진','🖼️'],['pdf','PDF','📕'],['hwp','한글','📘'],['office','문서','📗'],['etc','기타','📎']];
+const FICON = Object.fromEntries(FTYPES.map(t=>[t[0],t[2]]));
+function ftype(name, mime){
+  const e = (String(name).split('.').pop()||'').toLowerCase();
+  if (/^image\//.test(mime||'') || ['jpg','jpeg','png','gif','webp','heic','heif','bmp'].includes(e)) return 'photo';
+  if (e==='pdf') return 'pdf';
+  if (['hwp','hwpx'].includes(e)) return 'hwp';
+  if (['doc','docx','xls','xlsx','ppt','pptx','txt','csv','show','cell'].includes(e)) return 'office';
+  return 'etc';
+}
+const fsize = n => n>=1048576 ? (n/1048576).toFixed(1)+'MB' : Math.max(1,Math.round(n/1024))+'KB';
+const fdate = t => { const d = new Date(t); return `${d.getMonth()+1}/${d.getDate()}`; };
+const toB64 = buf => { let s=''; const b = new Uint8Array(buf); for (let i=0;i<b.length;i+=0x8000) s += String.fromCharCode.apply(null, b.subarray(i,i+0x8000)); return btoa(s); };
+const fromB64 = s => { const bin = atob(s), u = new Uint8Array(bin.length); for (let i=0;i<bin.length;i++) u[i] = bin.charCodeAt(i); return u; };
+const toDataURL = blob => new Promise((ok,no)=>{ const r = new FileReader(); r.onload = ()=>ok(r.result); r.onerror = no; r.readAsDataURL(blob); });
+// 사진 크기 줄이기 (긴 쪽 max 픽셀)
+async function shrink(file, max, q){
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((ok,no)=>{ const i = new Image(); i.onload=()=>ok(i); i.onerror=no; i.src=url; });
+    const k = Math.min(1, max/Math.max(img.naturalWidth,img.naturalHeight));
+    const c = document.createElement('canvas'); c.width = Math.round(img.naturalWidth*k); c.height = Math.round(img.naturalHeight*k);
+    const x = c.getContext('2d'); x.fillStyle='#fff'; x.fillRect(0,0,c.width,c.height); x.drawImage(img,0,0,c.width,c.height);
+    return await new Promise(ok => c.toBlob(ok,'image/jpeg',q));
+  } finally { URL.revokeObjectURL(url); }
+}
+const fcol = () => fb.F.collection(fb.db,'users',fb.uid,'files');
+const pdoc = (id,n) => fb.F.doc(fb.db,'users',fb.uid,'fileparts',id+'_'+n);
+async function loadFiles(y){
+  S.files = [];
+  if (!USE_FB) return;
+  try {
+    const snap = await fb.F.getDocs(fb.F.query(fcol(), fb.F.where('year','==',y)));
+    S.files = snap.docs.map(d=>({id:d.id, ...d.data()})).sort((a,b)=>b.at-a.at);
+  } catch(e){ console.error(e); }
+}
+async function fileBlobURL(f){
+  if (S.fcache[f.id]) return S.fcache[f.id];
+  const snaps = await Promise.all(Array.from({length:f.parts},(_,i)=>fb.F.getDoc(pdoc(f.id,i))));
+  if (snaps.some(x=>!x.exists())) throw new Error('파일 조각이 빠져 있습니다. 다시 올려 주세요.');
+  const blob = new Blob(snaps.map(x=>fromB64(x.data().d)), {type: f.mime || 'application/octet-stream'});
+  return (S.fcache[f.id] = URL.createObjectURL(blob));
+}
+const fileErr = e => e && e.code==='permission-denied' ? '저장 권한이 없습니다. 파이어베이스 규칙을 확인해야 합니다.' : (e.message||String(e));
+
 async function initFirebase(){
   const V = 'https://www.gstatic.com/firebasejs/10.12.2/';
   const [A0, A, F] = await Promise.all([import(V+'firebase-app.js'), import(V+'firebase-auth.js'), import(V+'firebase-firestore.js')]);
@@ -426,11 +494,32 @@ const VIEWS = {
 
   // ----- 기타 자료 (시트에 새로 만든 탭) -----
   custom(){
+    // --- 파일 자료 ---
+    const F = S.files, ff = S.ff;
+    const cnt = k => F.filter(f=>f.type===k).length;
+    const list = ff==='all' ? F : F.filter(f=>f.type===ff);
+    const photos = list.filter(f=>f.type==='photo'), docs = list.filter(f=>f.type!=='photo');
+    const fileBox = `<div class="card noprint">
+      <div class="row between" style="margin:0 0 6px"><h3 style="margin:0">📎 파일 자료 <small style="color:#888;font-weight:400">${S.year}학년도 · ${F.length}개</small></h3>
+        <button class="btn" onclick="App.pickFiles()">+ 파일 올리기</button></div>
+      <input type="file" id="fpick" multiple style="display:none" onchange="App.upFiles(this.files);this.value=''">
+      <p class="hint">사진, PDF, 한글(hwp), 워드·엑셀 등 무엇이든 올릴 수 있습니다. 여러 개를 한꺼번에 골라도 됩니다.<br>파일 하나에 20MB까지 · 사진은 자동으로 알맞은 크기로 줄여서 올립니다.</p>
+      ${USE_FB?'':'<p class="hint" style="color:#c00">연습 모드에서는 파일을 올릴 수 없습니다. (파이어베이스 연결 후 사용)</p>'}
+      ${S.upl?`<div class="upl">⏳ ${esc(S.upl)}</div>`:''}
+      ${F.length?`<div class="chips" style="margin:6px 0 10px">${chip(`전체 (${F.length})`,ff==='all',"App.set('ff','all')")}${FTYPES.filter(t=>cnt(t[0])).map(([k,n,ic])=>chip(`${ic} ${n} (${cnt(k)})`,ff===k,`App.set('ff','${k}')`)).join('')}</div>`:''}
+      ${photos.length?`<div class="fgrid">${photos.map(f=>`<div class="fthumb" onclick="App.openFile('${f.id}')">${f.thumb?`<img src="${f.thumb}" alt="">`:'<div class="fic">🖼️</div>'}<div class="fn">${esc(f.memo||f.name)}</div></div>`).join('')}</div>`:''}
+      ${docs.length?`<div class="flist">${docs.map(f=>`<div class="fitem" onclick="App.openFile('${f.id}')"><span class="fic2">${FICON[f.type]}</span>
+          <span class="fmain"><b>${esc(f.name)}</b>${f.memo?`<small>${esc(f.memo)}</small>`:''}</span><span class="fmeta">${fsize(f.size)}<br>${fdate(f.at)}</span></div>`).join('')}</div>`:''}
+      ${!F.length?'<p class="empty" style="padding:14px">아직 올린 파일이 없습니다.</p>':''}
+    </div>`;
+    // --- 표 자료 (구글시트의 다른 탭) ---
     const C = S.D.custom || [];
-    if (!C.length) return `<p class="empty">아직 없습니다.<br>구글시트에 새 탭을 만들었다면 [자료 넣기] → <b>+ 새 표</b>로 넣으세요.<br>표 이름과 칸 제목은 시트 그대로 보여 줍니다.</p>`;
-    return `<div class="row between noprint"><div class="chips">${C.map(c=>`<a href="#c_${c.id}" class="chip" style="text-decoration:none">${esc(c.name)} (${c.rows.length})</a>`).join('')}</div>${printBtn}</div>` +
-      C.map(c => `<h3 class="sec" id="c_${c.id}">${esc(c.name)} <small style="color:#888">${c.rows.length}줄</small> <button class="mini noprint" onclick="App.delCustom('${c.id}')">지우기</button></h3>
-      ${tbl(c.cols.map(esc), c.rows.map(r=>`<tr>${c.cols.map((_,i)=>`<td>${esc(r.c[i])}</td>`).join('')}</tr>`), {left:[0]})}`).join('');
+    const tables = !C.length
+      ? `<p class="hint">구글시트에 새 탭을 만들면 [자료 넣기]에서 불러올 때 여기에 표로 나옵니다.</p>`
+      : `<div class="row between noprint"><div class="chips">${C.map(c=>`<a href="#c_${c.id}" class="chip" style="text-decoration:none">${esc(c.name)} (${c.rows.length})</a>`).join('')}</div>${printBtn}</div>` +
+        C.map(c => `<h3 class="sec" id="c_${c.id}">${esc(c.name)} <small style="color:#888">${c.rows.length}줄</small> <button class="mini noprint" onclick="App.delCustom('${c.id}')">지우기</button></h3>
+        ${tbl(c.cols.map(esc), c.rows.map(r=>`<tr>${c.cols.map((_,i)=>`<td>${esc(r.c[i])}</td>`).join('')}</tr>`), {left:[0]})}`).join('');
+    return fileBox + `<h3 class="sec">📊 표 자료</h3>` + tables;
   },
 
   // ----- 자료 넣기 -----
@@ -686,6 +775,71 @@ window.App = {
       if (old) Object.assign(old, rec); else S.D.custom.push(rec);
     });
     save(); S.sync = null; S.tab = 'classes'; render(); toast('시트 내용으로 바꿨습니다');
+  },
+
+  // --- 파일 자료 ---
+  pickFiles(){ if (!USE_FB) return toast('파이어베이스를 연결한 뒤에 쓸 수 있습니다'); document.getElementById('fpick').click(); },
+  async upFiles(fileList){
+    const files = [...(fileList||[])]; if (!files.length) return;
+    let done = 0;
+    for (const file of files){
+      try {
+        let blob = file, name = file.name, thumb = '';
+        const type = ftype(file.name, file.type);
+        if (type==='photo'){
+          try {
+            const small = await shrink(file, 2000, 0.85);
+            if (small && small.size < file.size){ blob = small; name = name.replace(/\.[^.]+$/,'') + '.jpg'; }
+            thumb = await toDataURL(await shrink(file, 360, 0.7));
+          } catch(e){ /* 그림을 못 읽으면 원본 그대로 */ }
+        }
+        if (blob.size > FILE_MAX){ alert(`[${file.name}]은 ${fsize(blob.size)}라서 올릴 수 없습니다. (20MB까지)`); continue; }
+        const buf = await blob.arrayBuffer(), n = Math.max(1, Math.ceil(buf.byteLength/PART)), id = uid();
+        for (let i=0;i<n;i++){
+          S.upl = `올리는 중: ${name} (${Math.round(i/n*100)}%)` + (files.length>1?` · ${done+1}/${files.length}번째`:''); render();
+          await fb.F.setDoc(pdoc(id,i), {d: toB64(buf.slice(i*PART,(i+1)*PART)), i});
+        }
+        const meta = {name, type, mime: blob.type || file.type || 'application/octet-stream', size: blob.size, parts: n, year: S.year, at: Date.now(), memo: '', thumb};
+        await fb.F.setDoc(fb.F.doc(fcol(), id), meta);
+        S.files.unshift({id, ...meta}); done++;
+      } catch(e){ console.error(e); alert(`[${file.name}] 올리기 실패\n\n${fileErr(e)}`); }
+    }
+    S.upl = ''; S.tab = 'custom'; render();
+    if (done) toast(`파일 ${done}개를 올렸습니다`);
+  },
+  async openFile(id){
+    const f = S.files.find(x=>x.id===id); if (!f) return;
+    openM(`<h3>${FICON[f.type]} ${esc(f.name)}</h3><p class="empty">파일을 불러오는 중...</p>`);
+    let url;
+    try { url = await fileBlobURL(f); }
+    catch(e){ console.error(e); return openM(`<h3>${esc(f.name)}</h3><p class="empty" style="color:#c00">불러오지 못했습니다.<br>${esc(fileErr(e))}</p><div class="btns"><button class="btn ghost" onclick="App.closeM()">닫기</button></div>`); }
+    const view = f.type==='photo'
+      ? `<img src="${url}" alt="" style="width:100%;border-radius:10px;background:#f2f2f2">`
+      : `<div class="fbig">${FICON[f.type]}<div>${esc(f.name)}</div><small>${fsize(f.size)} · ${fdate(f.at)} 올림</small></div>`;
+    openM(`<h3 style="word-break:break-all">${esc(f.name)}</h3>${view}
+      <div class="btns">
+        ${f.type!=='hwp'?`<a class="btn" href="${url}" target="_blank" rel="noopener" style="text-decoration:none">${f.type==='photo'?'크게 보기':'열기'}</a>`:''}
+        <a class="btn ${f.type==='hwp'?'':'ghost'}" href="${url}" download="${esc(f.name)}" style="text-decoration:none">내려받기</a></div>
+      ${f.type==='hwp'?'<p class="hint">한글 파일은 내려받은 뒤 한글(또는 한컴오피스 뷰어) 앱으로 엽니다.</p>':''}
+      <div class="frow" style="margin-top:14px"><label>메모</label><input id="fmemo" value="${esc(f.memo||'')}" placeholder="예: 2학기 학부모 총회 사진"></div>
+      <div class="btns"><button class="btn" onclick="App.fileMemo('${f.id}')">메모 저장</button><button class="btn ghost" onclick="App.closeM()">닫기</button>
+        <button class="btn danger" onclick="App.delFile('${f.id}')">파일 지우기</button></div>`);
+  },
+  async fileMemo(id){
+    const f = S.files.find(x=>x.id===id), memo = document.getElementById('fmemo').value.trim();
+    try { await fb.F.setDoc(fb.F.doc(fcol(), id), {memo}, {merge:true}); f.memo = memo; App.closeM(); render(); toast('메모를 저장했습니다'); }
+    catch(e){ alert('저장 실패\n\n'+fileErr(e)); }
+  },
+  async delFile(id){
+    const f = S.files.find(x=>x.id===id);
+    if (!confirm(`[${f.name}] 파일을 지울까요? 되돌릴 수 없습니다.`)) return;
+    try {
+      await fb.F.deleteDoc(fb.F.doc(fcol(), id));
+      await Promise.all(Array.from({length:f.parts},(_,i)=>fb.F.deleteDoc(pdoc(id,i))));
+      S.files = S.files.filter(x=>x.id!==id);
+      if (S.fcache[id]){ URL.revokeObjectURL(S.fcache[id]); delete S.fcache[id]; }
+      App.closeM(); render(); toast('파일을 지웠습니다');
+    } catch(e){ alert('지우기 실패\n\n'+fileErr(e)); }
   },
 
   impKind(k){ S.imp.kind = k; S.imp.rows = null; render(); },
