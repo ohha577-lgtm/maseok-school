@@ -124,10 +124,19 @@ input,select,textarea{font-size:17px;padding:10px}
 .legend{display:flex;gap:14px;align-items:center;font-size:15px;color:#555;margin:4px 2px 10px;flex-wrap:wrap}
 .legend i{display:inline-block;width:14px;height:14px;border-radius:4px;margin-right:5px;vertical-align:-2px}
 @media print{.t tbody tr:nth-child(even) td{background:#fff}}
-/* 학급 현황: 학급 + 생활협약 */
-.ctbl td.cp{white-space:normal;min-width:260px;max-width:440px}
-.ctbl td.cp .gb{min-width:0;margin-right:10px;font-variant-numeric:tabular-nums}
-.ctbl td.cp .pl{color:#333;font-weight:500}
+/* 학급 카드: 1-1 + 생활협약, 아래 둥근 상자 */
+.ccard{cursor:pointer;padding:14px 14px 12px}
+.ccard:hover{box-shadow:0 2px 10px rgba(0,0,0,.12)}
+.chead{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.chead .gb{font-size:20px;min-width:0;padding:5px 12px;flex:0 0 auto;font-variant-numeric:tabular-nums}
+.cpl{font-size:18px;font-weight:700;line-height:1.35;word-break:keep-all}
+.cbox{border:1.5px solid #dde2ee;border-radius:14px;background:#f8f9fc;padding:10px 12px}
+.crow5{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;text-align:center;padding-bottom:8px;border-bottom:1px dashed #d9deea}
+.ci small{display:block;font-size:13px;color:#7a8090}.ci b{font-size:17px}
+.ci.big b{color:var(--c);font-size:19px}
+.cline{display:flex;gap:10px;padding:7px 2px 0;font-size:15px;line-height:1.45}
+.cline small{flex:0 0 58px;color:#7a8090;font-size:13px;padding-top:2px}
+.cline span{flex:1;word-break:keep-all}
 /* 수업 현황 교사별: 칸을 좁고 낮게, 담당 학급만 넓게 */
 .t.tight th,.t.tight td{padding:7px 10px}
 .t.tight td:not(.wrap),.t.tight th:not(:nth-child(3)){width:1%;white-space:nowrap}
@@ -379,25 +388,27 @@ const VIEWS = {
     const B = L.reduce((s,r)=>s+num(r.boys),0), G = L.reduce((s,r)=>s+num(r.girls),0);
     const rows = []; let g = null, gb = 0, gg = 0, gn = 0;
     const pad = xh('classes').map(()=>'<td></td>').join('');
-    const subtotal = () => rows.push(`<tr class="sub r${gN(g)}"><td class="l">${g}학년 계 · ${gn}학급</td><td></td><td></td><td></td><td></td><td>${gb}</td><td>${gg}</td><td>${gb+gg}</td>${pad}</tr>`);
+    const subtotal = () => rows.push(`<tr class="sub r${gN(g)}"><td>${g}학년 계</td><td>${gn}학급</td><td></td><td></td><td></td><td></td><td>${gb}</td><td>${gg}</td><td>${gb+gg}</td>${pad}</tr>`);
     for (const r of L){
       if (g!==null && r.grade!==g){ subtotal(); gb=gg=gn=0; }
       g = r.grade; gn++; gb += num(r.boys); gg += num(r.girls);
-      rows.push(`<tr class="click r${gN(r.grade)}" onclick="App.edit('classes','${r.id}')"><td class="l cp"><span class="gb g${gN(r.grade)}">${clsName(r)}</span><span class="pl">${esc(r.pledge)}</span></td><td>${esc(r.homeroom)}</td><td>${esc(r.subhome)}</td><td>${esc(r.sem1)}</td><td>${esc(r.sem2)}</td><td>${num(r.boys)}</td><td>${num(r.girls)}</td><td><b>${num(r.boys)+num(r.girls)}</b></td>${xtd('classes',r)}</tr>`);
+      rows.push(`<tr class="click r${gN(r.grade)}" onclick="App.edit('classes','${r.id}')"><td>${gBadge(r)}</td><td>${esc(r.cls)}반</td><td>${esc(r.homeroom)}</td><td>${esc(r.subhome)}</td><td>${esc(r.sem1)}</td><td>${esc(r.sem2)}</td><td>${num(r.boys)}</td><td>${num(r.girls)}</td><td><b>${num(r.boys)+num(r.girls)}</b></td>${xtd('classes',r)}</tr>`);
     }
-    if (L.length){ subtotal(); rows.push(`<tr class="tot"><td class="l">합계 · ${L.length}학급</td><td></td><td></td><td></td><td></td><td>${B}</td><td>${G}</td><td>${B+G}</td>${pad}</tr>`); }
+    if (L.length){ subtotal(); rows.push(`<tr class="tot"><td>합계</td><td>${L.length}학급</td><td></td><td></td><td></td><td></td><td>${B}</td><td>${G}</td><td>${B+G}</td>${pad}</tr>`); }
     return `<div class="stats">${stat('학급 수',L.length)}${stat('남학생',B)}${stat('여학생',G)}${stat('전체 학생',B+G)}${stat('학급당 평균',L.length?(Math.round((B+G)/L.length*10)/10):0)}</div>
     <div class="row between"><div class="chips noprint">${chip('표로 보기',S.cv==='table',"App.set('cv','table')")}${chip('학급 카드 (생활협약)',S.cv==='card',"App.set('cv','card')")}</div><span>${printBtn} <button class="btn noprint" onclick="App.add('classes')">+ 학급 추가</button></span></div>
     ${legend}
     ${S.cv==='card'
-      ? `<div class="grid2">${L.map(r=>`<div class="card c${gN(r.grade)}" style="cursor:pointer" onclick="App.edit('classes','${r.id}')">
-          <div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:21px;color:var(--g${gN(r.grade)},var(--c))">${clsName(r)}</b><small>남 ${num(r.boys)} · 여 ${num(r.girls)} · 계 ${num(r.boys)+num(r.girls)}</small></div>
-          <div class="hint" style="margin:6px 0">담임 <b>${esc(r.homeroom)}</b> · 부담임 ${esc(r.subhome)||'-'}</div>
-          <div class="hint" style="margin:4px 0">반장 1학기 <b>${esc(r.sem1)||'-'}</b> · 2학기 <b>${esc(r.sem2)||'-'}</b></div>
-          ${r.pledge?`<div style="background:var(--c2);border-radius:8px;padding:8px;margin-top:6px;white-space:pre-line">🤝 ${esc(r.pledge)}</div>`:''}
-          ${r.note?`<div class="hint" style="margin-top:6px">📌 ${esc(r.note)}</div>`:''}
-          ${xh('classes').filter(h=>(r.x||{})[h]).map(h=>`<div class="hint">${esc(h)}: ${esc(r.x[h])}</div>`).join('')}</div>`).join('')}</div>`
-      : tbl(['학급 · 생활협약','담임교사','부담임교사','1학기 반장','2학기 반장','남','여','계',...xth('classes')], rows, {left:[0], cls:'ctbl'})}
+      ? `<div class="grid2">${L.map(r=>{ const g = gN(r.grade), it = (k,v,big) => `<div class="ci${big?' big':''}"><small>${k}</small><b>${v}</b></div>`;
+          return `<div class="card ccard c${g}" onclick="App.edit('classes','${r.id}')">
+          <div class="chead"><span class="gb g${g}">${clsName(r)}</span><span class="cpl">${r.pledge?esc(r.pledge):'<span style="color:#aaa">(생활협약 없음)</span>'}</span></div>
+          <div class="cbox">
+            <div class="crow5">${it('담임',esc(r.homeroom)||'-')}${it('부담임',esc(r.subhome)||'-')}${it('남학생',num(r.boys))}${it('여학생',num(r.girls))}${it('총원',num(r.boys)+num(r.girls),1)}</div>
+            <div class="cline"><small>특이학생</small><span>${r.note?esc(r.note):'-'}</span></div>
+            <div class="cline"><small>반장</small><span>1학기 <b>${esc(r.sem1)||'-'}</b> · 2학기 <b>${esc(r.sem2)||'-'}</b></span></div>
+            ${xh('classes').filter(h=>(r.x||{})[h]).map(h=>`<div class="cline"><small>${esc(h)}</small><span>${esc(r.x[h])}</span></div>`).join('')}
+          </div></div>`; }).join('')}</div>`
+      : tbl(['학년','반','담임교사','부담임교사','1학기 반장','2학기 반장','남','여','계',...xth('classes')], rows)}
     <p class="hint noprint">줄을 누르면 고치거나 지울 수 있습니다.</p>`;
   },
 
